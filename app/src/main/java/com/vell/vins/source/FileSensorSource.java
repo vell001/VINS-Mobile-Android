@@ -18,6 +18,11 @@ import java.util.Locale;
 
 public class FileSensorSource extends BaseSensorSource {
     private static final String TAG = FileSensorSource.class.getSimpleName();
+
+    static {
+        System.loadLibrary("opencv_java3");
+    }
+
     private File dataDir;
     private File imageSaveDir;
     private BufferedReader frameTxtReader;
@@ -26,13 +31,111 @@ public class FileSensorSource extends BaseSensorSource {
     private double dataTimeToNowDeltaSec = 0;
     private HandlerThread threadHandler;
     private Handler playbackHandler;
+    private StateCallback stateCallback;
+    private Runnable frameRunnable = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                String frameLine = frameTxtReader.readLine();
+                if (frameLine == null) {
+                    Log.e(TAG, "frame data is empty");
+                    // 当frame结束时，回放结束，close
+                    close();
+                } else {
+                    final double[] frameData = str2NumArr(frameLine);
+                    if (frameData.length == 1) {
+                        if (dataTimeToNowDeltaSec == 0) {
+                            dataTimeToNowDeltaSec = SystemClock.uptimeMillis() / 1000.0 - frameData[0] + 0.1;
+                        }
+                        playbackHandler.postAtTime(new Runnable() {
+                            @Override
+                            public void run() {
+                                Mat image = Imgcodecs.imread(String.format(Locale.CHINA, "%s/%.6f.jpg", imageSaveDir.getAbsoluteFile(), frameData[0]));
+                                recvImage(frameData[0], image);
+
+                                // 继续执行读帧
+                                playbackHandler.post(frameRunnable);
+                            }
+                        }, (long) ((frameData[0] + dataTimeToNowDeltaSec) * 1000));
+                    } else {
+                        Log.e(TAG, "frame data format error");
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    };
+    private Runnable imuRunnable = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                String imuLine = imuTxtReader.readLine();
+                if (imuLine == null) {
+                    Log.e(TAG, "imu data is empty");
+                } else {
+                    final double[] imuData = str2NumArr(imuLine);
+                    if (imuData.length == 7) {
+                        if (dataTimeToNowDeltaSec == 0) {
+                            dataTimeToNowDeltaSec = SystemClock.uptimeMillis() / 1000.0 - imuData[0] + 0.1;
+                        }
+                        playbackHandler.postAtTime(new Runnable() {
+                            @Override
+                            public void run() {
+                                recvImu(imuData[0], imuData[1], imuData[2], imuData[3], imuData[4], imuData[5], imuData[6]);
+
+                                // 继续执行读帧
+                                playbackHandler.post(imuRunnable);
+                            }
+                        }, (long) ((imuData[0] + dataTimeToNowDeltaSec) * 1000));
+                    } else {
+                        Log.e(TAG, "imu data format error");
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    };
+    private Runnable gpsRunnable = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                String gpsLine = gpsTxtReader.readLine();
+                if (gpsLine == null) {
+                    Log.e(TAG, "gps data is empty");
+                } else {
+                    final double[] gpsData = str2NumArr(gpsLine);
+                    if (gpsData.length == 5) {
+                        if (dataTimeToNowDeltaSec == 0) {
+                            dataTimeToNowDeltaSec = SystemClock.uptimeMillis() / 1000.0 - gpsData[0] + 0.1;
+                        }
+                        playbackHandler.postAtTime(new Runnable() {
+                            @Override
+                            public void run() {
+                                recvGPS(gpsData[0], gpsData[1], gpsData[2], gpsData[3], gpsData[4]);
+
+                                // 继续执行读帧
+                                playbackHandler.post(gpsRunnable);
+                            }
+                        }, (long) ((gpsData[0] + dataTimeToNowDeltaSec) * 1000));
+                    } else {
+                        Log.e(TAG, "gps data format error");
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    };
 
     public FileSensorSource(File dataDir) {
         this.dataDir = dataDir;
     }
 
     @Override
-    public void open(StateCallback stateCallback) {
+    public void open(StateCallback callback) {
+        stateCallback = callback;
         if (dataDir != null && dataDir.exists()) {
             imageSaveDir = new File(dataDir, "image");
             File frameTxt = new File(dataDir, "frame.txt");
@@ -77,8 +180,10 @@ public class FileSensorSource extends BaseSensorSource {
                 threadHandler.quit();
                 threadHandler = null;
             }
+            if (stateCallback != null) stateCallback.onClosed();
         } catch (IOException e) {
             e.printStackTrace();
+            if (stateCallback != null) stateCallback.onError();
         }
     }
 
@@ -93,106 +198,5 @@ public class FileSensorSource extends BaseSensorSource {
             doubles[i] = Double.valueOf(arr[i]);
         }
         return doubles;
-    }
-
-    private Runnable frameRunnable = new Runnable() {
-        @Override
-        public void run() {
-            try {
-                String frameLine = frameTxtReader.readLine();
-                if (frameLine == null) {
-                    Log.e(TAG, "frame data is empty");
-                } else {
-                    final double[] frameData = str2NumArr(frameLine);
-                    if (frameData.length == 1) {
-                        if (dataTimeToNowDeltaSec == 0) {
-                            dataTimeToNowDeltaSec = SystemClock.uptimeMillis() / 1000.0 - frameData[0] + 0.1;
-                        }
-                        playbackHandler.postAtTime(new Runnable() {
-                            @Override
-                            public void run() {
-                                Mat image = Imgcodecs.imread(String.format(Locale.CHINA, "%s/%.6f.jpg", imageSaveDir.getAbsoluteFile(), frameData[0]));
-                                recvImage(frameData[0], image);
-
-                                // 继续执行读帧
-                                playbackHandler.post(this);
-                            }
-                        }, (long) ((frameData[0] + dataTimeToNowDeltaSec) * 1000));
-                    } else {
-                        Log.e(TAG, "frame data format error");
-                    }
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    };
-
-    private Runnable imuRunnable = new Runnable() {
-        @Override
-        public void run() {
-            try {
-                String imuLine = imuTxtReader.readLine();
-                if (imuLine == null) {
-                    Log.e(TAG, "imu data is empty");
-                } else {
-                    final double[] imuData = str2NumArr(imuLine);
-                    if (imuData.length == 7) {
-                        if (dataTimeToNowDeltaSec == 0) {
-                            dataTimeToNowDeltaSec = SystemClock.uptimeMillis() / 1000.0 - imuData[0] + 0.1;
-                        }
-                        playbackHandler.postAtTime(new Runnable() {
-                            @Override
-                            public void run() {
-                                recvImu(imuData[0], imuData[1], imuData[2], imuData[3], imuData[4], imuData[5], imuData[6]);
-
-                                // 继续执行读帧
-                                playbackHandler.post(this);
-                            }
-                        }, (long) ((imuData[0] + dataTimeToNowDeltaSec) * 1000));
-                    } else {
-                        Log.e(TAG, "imu data format error");
-                    }
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    };
-
-    private Runnable gpsRunnable = new Runnable() {
-        @Override
-        public void run() {
-            try {
-                String gpsLine = gpsTxtReader.readLine();
-                if (gpsLine == null) {
-                    Log.e(TAG, "gps data is empty");
-                } else {
-                    final double[] gpsData = str2NumArr(gpsLine);
-                    if (gpsData.length == 5) {
-                        if (dataTimeToNowDeltaSec == 0) {
-                            dataTimeToNowDeltaSec = SystemClock.uptimeMillis() / 1000.0 - gpsData[0] + 0.1;
-                        }
-                        playbackHandler.postAtTime(new Runnable() {
-                            @Override
-                            public void run() {
-                                recvGPS(gpsData[0], gpsData[1], gpsData[2], gpsData[3], gpsData[4]);
-
-                                // 继续执行读帧
-                                playbackHandler.post(this);
-                            }
-                        }, (long) ((gpsData[0] + dataTimeToNowDeltaSec) * 1000));
-                    } else {
-                        Log.e(TAG, "gps data format error");
-                    }
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    };
-
-    static {
-        System.loadLibrary("opencv_java3");
     }
 }

@@ -106,8 +106,8 @@ public class JavaCameraActivity extends Activity {
         checkPermissionsIfNeccessary();
 
         sensorRecorder = new FileSensorRecorder();
-        sensorSource = new PhoneSensorSource(this);
-//        sensorSource = new FileSensorSource(new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "0_vins_record/Mar 1, 2019 9:58:47 PM/"));
+//        sensorSource = new PhoneSensorSource(this);
+        sensorSource = new FileSensorSource(new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "0_vins_record/2019-03-06_14:30:04/"));
         sensorSource.registerListener(sensorListener);
         sensorSource.registerListener(sensorRecorder);
 

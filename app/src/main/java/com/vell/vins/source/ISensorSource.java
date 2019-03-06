@@ -25,6 +25,8 @@ public interface ISensorSource {
     interface StateCallback {
         void onOpened();
 
+        void onClosed();
+
         void onError();
     }
 }

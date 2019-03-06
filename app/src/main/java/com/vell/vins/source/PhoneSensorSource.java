@@ -84,7 +84,7 @@ public class PhoneSensorSource extends BaseSensorSource implements SensorEventLi
             @Override
             public void onDisconnected(CameraDevice camera) {
                 if (stateCallback != null) {
-                    stateCallback.onError();
+                    stateCallback.onClosed();
                 }
             }
 
