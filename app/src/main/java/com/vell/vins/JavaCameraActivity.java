@@ -44,7 +44,6 @@ public class JavaCameraActivity extends Activity {
     private FileSensorRecorder sensorRecorder;
     private boolean saveFrame = false;
     private File saveDir = new File(Environment.getExternalStorageDirectory(), "1_test");
-    private boolean useLocalImage = true;
 
     private final ISensorSource.SensorListener sensorListener = new ISensorSource.SensorListener() {
         @Override
@@ -106,22 +105,43 @@ public class JavaCameraActivity extends Activity {
         checkPermissionsIfNeccessary();
 
         sensorRecorder = new FileSensorRecorder();
-//        sensorSource = new PhoneSensorSource(this);
-        sensorSource = new FileSensorSource(new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "0_vins_record/2019-03-06_14:30:04/"));
+        final ISensorSource phoneSensorSource = new PhoneSensorSource(JavaCameraActivity.this);
+        final ISensorSource fileSensorSource = new FileSensorSource(new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "0_vins_record/2019-03-06_15:43:01/"));
+        sensorSource = phoneSensorSource;
         sensorSource.registerListener(sensorListener);
         sensorSource.registerListener(sensorRecorder);
 
-        VinsUtils.init("");
-
         findViewById(R.id.tv_info).setOnClickListener(new View.OnClickListener() {
+            private boolean useLocalImage = false;
+
             @Override
             public void onClick(View v) {
+                sensorSource.close();
+                sensorSource.unregisterListener(sensorListener);
+                sensorSource.unregisterListener(sensorRecorder);
                 if (useLocalImage) {
                     useLocalImage = false;
+                    sensorSource = phoneSensorSource;
+
                     Toast.makeText(JavaCameraActivity.this, "使用摄像头数据", Toast.LENGTH_SHORT).show();
                 } else {
                     useLocalImage = true;
+                    sensorSource = fileSensorSource;
                     Toast.makeText(JavaCameraActivity.this, "使用本地数据", Toast.LENGTH_SHORT).show();
+
+                }
+                sensorSource.registerListener(sensorListener);
+                sensorSource.registerListener(sensorRecorder);
+                sensorSource.open(null);
+            }
+        });
+
+        findViewById(R.id.start_slam).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(!VinsUtils.initSucess()) {
+                    VinsUtils.init("");
+                    Toast.makeText(JavaCameraActivity.this, "开始slam", Toast.LENGTH_SHORT).show();
                 }
             }
         });

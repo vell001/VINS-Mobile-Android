@@ -147,7 +147,7 @@ void ViewController::processImage(cv::Mat &image, double timeStamp, bool isScree
             return;
         }
         img_msg->header = timeStamp;
-        LOGI("image timeStamp%lf", timeStamp);
+        LOGI("recv_image timeStamp%lf", timeStamp);
         // if this is the case the feature-tracker wont work because the mask is cols x rows 480x640
         bool isNeedRotation = image.size() != frameSize;
         assert(!isNeedRotation);
@@ -379,13 +379,13 @@ std::vector<std::pair<std::vector<ImuConstPtr>, ImgConstPtr>> ViewController::ge
 
         if (!(imu_msg_buf.back()->header > img_msg_buf.front()->header)) {
             __android_log_print(ANDROID_LOG_INFO, "VINS",
-                                "wait for imu, only should happen at the beginning");
+                                "wait for imu, only should happen at the beginning %lf , %lf",imu_msg_buf.back()->header,img_msg_buf.front()->header);
             return measurements;
         }
 
         if (!(imu_msg_buf.front()->header < img_msg_buf.front()->header)) {
             __android_log_print(ANDROID_LOG_INFO, "VINS",
-                                "throw img, only should happen at the beginning");
+                                "throw img, only should happen at the beginning %lf , %lf",imu_msg_buf.front()->header,img_msg_buf.front()->header);
             img_msg_buf.pop();
             continue;
         }
@@ -1212,7 +1212,7 @@ void ViewController::loopButtonPressed(bool isChecked) {
 }
 
 void ViewController::recv_imu(const ImuConstPtr &imu_msg) {
-    LOGI("pushing new imu_msg & setting lateast_imu_time: %lf \nAcc: %lf %lf %lf \nGyro: %lf %lf %lf",
+    LOGI("recv_imu: %lf Acc: %lf %lf %lf Gyro: %lf %lf %lf",
          imu_msg->header,
          imu_msg->acc[0], imu_msg->acc[1], imu_msg->acc[2],
          imu_msg->gyr[0], imu_msg->gyr[1], imu_msg->gyr[2]);

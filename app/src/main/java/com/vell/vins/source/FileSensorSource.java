@@ -8,6 +8,7 @@ import android.util.Log;
 
 import org.opencv.core.Mat;
 import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -31,12 +32,14 @@ public class FileSensorSource extends BaseSensorSource {
     private double dataTimeToNowDeltaSec = 0;
     private HandlerThread threadHandler;
     private Handler playbackHandler;
+    private HandlerThread imageThreadHandler;
+    private Handler imageHandler;
     private StateCallback stateCallback;
     private Runnable frameRunnable = new Runnable() {
         @Override
         public void run() {
             try {
-                String frameLine = frameTxtReader.readLine();
+                final String frameLine = frameTxtReader.readLine();
                 if (frameLine == null) {
                     Log.e(TAG, "frame data is empty");
                     // 当frame结束时，回放结束，close
@@ -47,14 +50,17 @@ public class FileSensorSource extends BaseSensorSource {
                         if (dataTimeToNowDeltaSec == 0) {
                             dataTimeToNowDeltaSec = SystemClock.uptimeMillis() / 1000.0 - frameData[0] + 0.1;
                         }
-                        playbackHandler.postAtTime(new Runnable() {
+
+                        final Mat image = Imgcodecs.imread(String.format(Locale.CHINA, "%s/%.6f.jpg", imageSaveDir.getAbsoluteFile(), frameData[0]));
+                        Imgproc.cvtColor(image,image,Imgproc.COLOR_BGR2RGB);
+                        imageHandler.postAtTime(new Runnable() {
                             @Override
                             public void run() {
-                                Mat image = Imgcodecs.imread(String.format(Locale.CHINA, "%s/%.6f.jpg", imageSaveDir.getAbsoluteFile(), frameData[0]));
+                                Log.d(TAG,"recv image" + frameLine);
                                 recvImage(frameData[0], image);
 
                                 // 继续执行读帧
-                                playbackHandler.post(frameRunnable);
+                                imageHandler.post(frameRunnable);
                             }
                         }, (long) ((frameData[0] + dataTimeToNowDeltaSec) * 1000));
                     } else {
@@ -70,7 +76,7 @@ public class FileSensorSource extends BaseSensorSource {
         @Override
         public void run() {
             try {
-                String imuLine = imuTxtReader.readLine();
+                final String imuLine = imuTxtReader.readLine();
                 if (imuLine == null) {
                     Log.e(TAG, "imu data is empty");
                 } else {
@@ -82,6 +88,7 @@ public class FileSensorSource extends BaseSensorSource {
                         playbackHandler.postAtTime(new Runnable() {
                             @Override
                             public void run() {
+                                Log.d(TAG,"recv imu" + imuLine);
                                 recvImu(imuData[0], imuData[1], imuData[2], imuData[3], imuData[4], imuData[5], imuData[6]);
 
                                 // 继续执行读帧
@@ -101,7 +108,7 @@ public class FileSensorSource extends BaseSensorSource {
         @Override
         public void run() {
             try {
-                String gpsLine = gpsTxtReader.readLine();
+                final String gpsLine = gpsTxtReader.readLine();
                 if (gpsLine == null) {
                     Log.e(TAG, "gps data is empty");
                 } else {
@@ -113,6 +120,7 @@ public class FileSensorSource extends BaseSensorSource {
                         playbackHandler.postAtTime(new Runnable() {
                             @Override
                             public void run() {
+                                Log.d(TAG,"recv gps" + gpsLine);
                                 recvGPS(gpsData[0], gpsData[1], gpsData[2], gpsData[3], gpsData[4]);
 
                                 // 继续执行读帧
@@ -149,7 +157,13 @@ public class FileSensorSource extends BaseSensorSource {
                 threadHandler = new HandlerThread("FileSensorSourceThread");
                 threadHandler.start();
                 playbackHandler = new Handler(threadHandler.getLooper());
-                playbackHandler.post(frameRunnable);
+
+                imageThreadHandler = new HandlerThread("FileSensorSourceImageThread");
+                imageThreadHandler.start();
+                imageHandler = new Handler(imageThreadHandler.getLooper());
+
+                imageHandler.post(frameRunnable);
+
                 playbackHandler.post(imuRunnable);
                 playbackHandler.post(gpsRunnable);
 
@@ -179,6 +193,10 @@ public class FileSensorSource extends BaseSensorSource {
             if (threadHandler != null) {
                 threadHandler.quit();
                 threadHandler = null;
+            }
+            if (imageThreadHandler != null) {
+                imageThreadHandler.quit();
+                imageThreadHandler = null;
             }
             if (stateCallback != null) stateCallback.onClosed();
         } catch (IOException e) {
