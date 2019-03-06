@@ -1,5 +1,9 @@
 基于https://github.com/jannismoeller/VINS-Mobile-Android 项目进行一些适合自己手机的开发，我的手机是小米mix2，目前运行效果还ok，感谢jannismoeller
 
+需要将[opencv](https://sourceforge.net/projects/opencvlibrary/files/3.4.5/opencv-3.4.5-android-sdk.zip/download)解压到：app/libs/VINS-Mobile-master/OpenCV-android-sdk3.4.5
+[boost](https://sourceforge.net/projects/boost/files/boost/1.63.0/boost_1_63_0.tar.bz2/download)解压到：app/libs/VINS-Mobile-master/VINS_ThirdPartyLib/boost_1_63_0；
+ceres还是需要编译下的，到app\libs\VINS-Mobile-master\VINS_ThirdPartyLib\ceres-solver\jni文件夹下执行nkd-build
+
 # VINS-Mobile-Android
 
 ### Warning: Potentially harmful code

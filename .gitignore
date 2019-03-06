@@ -61,3 +61,7 @@ build
 gradle/
 gradle*
 log
+
+# 不上传boost、opencv库，太大了
+boost_1_63_0/
+OpenCV-android-sdk/
