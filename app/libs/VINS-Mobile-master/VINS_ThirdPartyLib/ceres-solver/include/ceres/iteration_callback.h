@@ -173,10 +173,10 @@ struct CERES_EXPORT IterationSummary {
 // SOLVER_CONTINUE indicates that the solver should continue
 // optimizing.
 //
-// For example, the following Callback is used internally by Ceres to
+// For example, the following SensorListener is used internally by Ceres to
 // log the progress of the optimization.
 //
-// Callback for logging the state of the minimizer to STDERR or STDOUT
+// SensorListener for logging the state of the minimizer to STDERR or STDOUT
 // depending on the user's preferences and logging level.
 //
 //   class LoggingCallback : public IterationCallback {

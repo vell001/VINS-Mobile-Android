@@ -1,23 +1,12 @@
 package com.vell.vins;
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.ImageFormat;
-import android.hardware.Sensor;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
-import android.hardware.camera2.CameraAccessException;
-import android.hardware.camera2.CameraDevice;
-import android.location.Criteria;
 import android.location.GpsSatellite;
 import android.location.GpsStatus;
-import android.location.LocationListener;
 import android.location.LocationManager;
-import android.media.Image;
-import android.media.ImageReader;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.NonNull;
@@ -30,8 +19,11 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-
 import com.thkoeln.jmoeller.vins_mobile_androidport.R;
+import com.vell.vins.source.FileSensorRecorder;
+import com.vell.vins.source.FileSensorSource;
+import com.vell.vins.source.ISensorSource;
+import com.vell.vins.source.PhoneSensorSource;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
@@ -48,36 +40,26 @@ import java.util.Locale;
 public class JavaCameraActivity extends Activity {
     private static final String TAG = JavaCameraActivity.class.getSimpleName();
     private static final int PERMISSIONS_REQUEST_CODE = 12345;
-    private final int imageWidth = 640;
-    private final int imageHeight = 360;
-    private ImageReader imageReader;
-    private JavaCamera javaCamera;
-    private Vins vins;
+    private ISensorSource sensorSource;
+    private FileSensorRecorder sensorRecorder;
     private boolean saveFrame = false;
     private File saveDir = new File(Environment.getExternalStorageDirectory(), "1_test");
     private boolean useLocalImage = true;
-    private final ImageReader.OnImageAvailableListener onImageAvailableListener = new ImageReader.OnImageAvailableListener() {
-        /*
-         *  The following method will be called every time an image is ready
-         *  be sure to use method acquireNextImage() and then close(), otherwise, the display may STOP
-         */
+
+    private final ISensorSource.SensorListener sensorListener = new ISensorSource.SensorListener() {
         @Override
-        public void onImageAvailable(ImageReader reader) {
-            // get the newest frame
-            Image image = reader.acquireNextImage();
+        public void recvImu(double timeSec, double ax, double ay, double az, double gx, double gy, double gz) {
+            VinsUtils.recvImu(timeSec, ax, ay, az, gx, gy, gz);
+        }
 
-            if (image == null) {
-                return;
-            }
-//            Log.i(TAG,"get new image, height: " + image.getHeight() + " width: " + image.getWidth());
-            Mat originMat = ImageUtils.getMatFromImage(image);
+        @Override
+        public void recvImage(double timeSec, Mat bgr) {
+            Mat vinsMat = new Mat();
+            bgr.copyTo(vinsMat);
+            VinsUtils.recvImage(timeSec, vinsMat.nativeObj);
 
-            if (vins != null) {
-                vins.recvImage(image.getTimestamp(), originMat);
-            }
-
-            final Bitmap originBitmap = Bitmap.createBitmap(image.getWidth(), image.getHeight(), Bitmap.Config.RGB_565);
-            Utils.matToBitmap(originMat, originBitmap);
+            final Bitmap originBitmap = Bitmap.createBitmap(vinsMat.cols(), vinsMat.rows(), Bitmap.Config.RGB_565);
+            Utils.matToBitmap(vinsMat, originBitmap);
             if (saveFrame) {
                 try {
                     saveFrame = false;
@@ -105,10 +87,14 @@ public class JavaCameraActivity extends Activity {
                     ((TextView) findViewById(R.id.tv_info)).setText(infoBuilder.toString());
                 }
             });
-            image.close();
 
             Log.i(TAG, "pos: " + VinsUtils.getLatestPosition()[0]);
             Log.i(TAG, "rot: " + VinsUtils.getLatestRotation()[0]);
+        }
+
+        @Override
+        public void recvGPS(double timeSec, double latitude, double longitude, double altitude, double posAccuracy) {
+            VinsUtils.recvGPS(timeSec, latitude, longitude, altitude, posAccuracy);
         }
     };
 
@@ -119,13 +105,13 @@ public class JavaCameraActivity extends Activity {
         // first make sure the necessary permissions are given
         checkPermissionsIfNeccessary();
 
-        // to set the format of captured images and the maximum number of images that can be accessed in mImageReader
-        imageReader = ImageReader.newInstance(imageWidth, imageHeight, ImageFormat.YUV_420_888, 1);
+        sensorRecorder = new FileSensorRecorder();
+        sensorSource = new PhoneSensorSource(this);
+//        sensorSource = new FileSensorSource(new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "0_vins_record/Mar 1, 2019 9:58:47 PM/"));
+        sensorSource.registerListener(sensorListener);
+        sensorSource.registerListener(sensorRecorder);
 
-        imageReader.setOnImageAvailableListener(onImageAvailableListener, null);
-
-        javaCamera = new JavaCamera();
-        javaCamera.addImageReader(imageReader);
+        VinsUtils.init("");
 
         findViewById(R.id.tv_info).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -147,17 +133,15 @@ public class JavaCameraActivity extends Activity {
             }
         });
         findViewById(R.id.record).setOnClickListener(new View.OnClickListener() {
-            boolean isRecording = false;
 
             @Override
             public void onClick(View v) {
-                if (isRecording) {
-                    vins.slamRecorder.stopRecord();
+                if (sensorRecorder.isRecording()) {
+                    sensorRecorder.stopRecord();
                 } else {
-                    vins.slamRecorder.startRecord();
+                    sensorRecorder.startRecord();
                 }
-                isRecording = vins.slamRecorder.isRecording();
-                ((TextView) v).setText(isRecording ? "停止" : "录像");
+                ((TextView) v).setText(sensorRecorder.isRecording() ? "停止" : "录像");
             }
         });
         findViewById(R.id.java_camera_view).setOnClickListener(new View.OnClickListener() {
@@ -169,11 +153,6 @@ public class JavaCameraActivity extends Activity {
                 VinsUtils.enableAR(enable);
             }
         });
-
-        vins = new Vins();
-
-        subscribeToImuUpdates(vins, SensorManager.SENSOR_DELAY_FASTEST);
-        subscribeToLocationUpdates(vins, 20);
 
         // 增加gps信息展示
         final LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
@@ -203,32 +182,13 @@ public class JavaCameraActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        javaCamera.open(this, new CameraDevice.StateCallback() {
-            @Override
-            public void onOpened(CameraDevice camera) {
-                try {
-                    vins.init(javaCamera.getCameraCharacteristics());
-                } catch (CameraAccessException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            @Override
-            public void onDisconnected(CameraDevice camera) {
-
-            }
-
-            @Override
-            public void onError(CameraDevice camera, int error) {
-
-            }
-        });
+        sensorSource.open(null);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        javaCamera.close();
+        sensorSource.close();
     }
 
     /**
@@ -276,21 +236,5 @@ public class JavaCameraActivity extends Activity {
                 finish();
             }
         }
-    }
-
-    private void subscribeToImuUpdates(SensorEventListener listener, int delay) {
-        final SensorManager sm = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        sm.registerListener(listener, sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE), delay);
-        sm.registerListener(listener, sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), delay);
-    }
-
-    private void subscribeToLocationUpdates(LocationListener listener, long minTimeMsec) {
-        final LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-        final String bestProvider = locationManager.getBestProvider(new Criteria(), false);
-        locationManager.requestLocationUpdates(bestProvider, minTimeMsec, 0.01f, listener);
-    }
-
-    static {
-        System.loadLibrary("opencv_java3");
     }
 }

@@ -40,7 +40,7 @@ namespace internal {
 
 class Program;
 
-// Callback for updating the externally visible state of parameter
+// SensorListener for updating the externally visible state of parameter
 // blocks.
 class StateUpdatingCallback : public IterationCallback {
  public:
@@ -52,7 +52,7 @@ class StateUpdatingCallback : public IterationCallback {
   double* parameters_;
 };
 
-// Callback for logging the state of the minimizer to STDERR or
+// SensorListener for logging the state of the minimizer to STDERR or
 // STDOUT depending on the user's preferences and logging level.
 class LoggingCallback : public IterationCallback {
  public:

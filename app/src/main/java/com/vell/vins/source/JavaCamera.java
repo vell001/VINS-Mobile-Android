@@ -1,4 +1,4 @@
-package com.vell.vins;
+package com.vell.vins.source;
 
 import android.Manifest;
 import android.content.Context;
@@ -20,10 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static android.hardware.camera2.CameraMetadata.CONTROL_AE_MODE_ON;
-import static android.hardware.camera2.CameraMetadata.CONTROL_AE_MODE_ON_AUTO_FLASH;
 import static android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_OFF;
-import static android.hardware.camera2.CameraMetadata.CONTROL_CAPTURE_INTENT_MOTION_TRACKING;
-import static android.hardware.camera2.CameraMetadata.CONTROL_CAPTURE_INTENT_VIDEO_RECORD;
 
 public class JavaCamera {
     private static final String TAG = JavaCamera.class.getSimpleName();

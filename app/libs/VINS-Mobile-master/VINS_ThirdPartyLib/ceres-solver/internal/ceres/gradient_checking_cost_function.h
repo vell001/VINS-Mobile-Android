@@ -44,7 +44,7 @@ namespace internal {
 
 class ProblemImpl;
 
-// Callback that collects information about gradient checking errors, and
+// SensorListener that collects information about gradient checking errors, and
 // will abort the solve as soon as an error occurs.
 class GradientCheckingIterationCallback : public IterationCallback {
  public:

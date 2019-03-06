@@ -331,7 +331,7 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
 
         // the first added target surface is for CameraView display
         // the second added target mImageReader.getSurface() 
-        // is for ImageReader Callback where it can be access EACH frame
+        // is for ImageReader SensorListener where it can be access EACH frame
         //mPreviewBuilder.addTarget(surface);
         previewBuilder.addTarget(imageReader.getSurface());
 

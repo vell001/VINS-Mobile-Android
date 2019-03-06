@@ -124,7 +124,7 @@ lapack_complex_double lapack_make_complex_double( double re, double im );
 #define LAPACK_WORK_MEMORY_ERROR       -1010
 #define LAPACK_TRANSPOSE_MEMORY_ERROR  -1011
 
-/* Callback logical functions of one, two, or three arguments are used
+/* SensorListener logical functions of one, two, or three arguments are used
 *  to select eigenvalues to sort to the top left of the Schur form.
 *  The value is selected if function returns TRUE (non-zero). */
 

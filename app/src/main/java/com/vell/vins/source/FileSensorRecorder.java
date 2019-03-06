@@ -1,35 +1,41 @@
-package com.vell.vins;
+package com.vell.vins.source;
 
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 
+import com.vell.vins.source.ISensorSource;
+
 import org.opencv.core.Mat;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Writer;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
-public class SlamRecorder {
+public class FileSensorRecorder implements ISensorSource.SensorListener {
     private boolean isRecording = false;
     private File recordRootDir = new File(Environment.getExternalStorageDirectory(), "0_vins_record");
     private File recordDir;
     private File imageSaveDir;
-    private FileWriter frameTxtWriter;
-    private FileWriter imuTxtWriter;
-    private FileWriter gpsTxtWriter;
+    private Writer frameTxtWriter;
+    private Writer imuTxtWriter;
+    private Writer gpsTxtWriter;
     private HandlerThread threadHandler;
     private Handler recordHandler;
+    private SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss", Locale.CHINA);
 
     public void startRecord() {
         if (isRecording) {
             return;
         }
-        recordDir = new File(recordRootDir, new Date().toLocaleString());
+        recordDir = new File(recordRootDir, formatter.format(new Date()));
         if (!recordDir.exists() && !recordDir.mkdirs()) {
             return;
         }
@@ -38,9 +44,9 @@ public class SlamRecorder {
             return;
         }
         try {
-            frameTxtWriter = new FileWriter(new File(recordDir, "frame.txt"));
-            imuTxtWriter = new FileWriter(new File(recordDir, "imu.txt"));
-            gpsTxtWriter = new FileWriter(new File(recordDir, "gps.txt"));
+            frameTxtWriter = new BufferedWriter(new FileWriter(new File(recordDir, "frame.txt")));
+            imuTxtWriter = new BufferedWriter(new FileWriter(new File(recordDir, "imu.txt")));
+            gpsTxtWriter = new BufferedWriter(new FileWriter(new File(recordDir, "gps.txt")));
         } catch (IOException e) {
             e.printStackTrace();
             return;
