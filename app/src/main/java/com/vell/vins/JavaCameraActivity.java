@@ -1,12 +1,14 @@
 package com.vell.vins;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.location.GpsSatellite;
 import android.location.GpsStatus;
 import android.location.LocationManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.NonNull;
@@ -28,9 +30,13 @@ import com.vell.vins.source.PhoneSensorSource;
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
@@ -43,13 +49,16 @@ public class JavaCameraActivity extends Activity {
     private ISensorSource sensorSource;
     private FileSensorRecorder sensorRecorder;
     private boolean saveFrame = false;
-    private File saveDir = new File(Environment.getExternalStorageDirectory(), "1_test");
+    private File saveDir = new File(Environment.getExternalStorageDirectory(), "0_vins_record");
+    private ISensorSource fileSensorSource;
 
     private final ISensorSource.SensorListener sensorListener = new ISensorSource.SensorListener() {
         @Override
         public void recvImu(double timeSec, double ax, double ay, double az, double gx, double gy, double gz) {
             VinsUtils.recvImu(timeSec, ax, ay, az, gx, gy, gz);
         }
+
+        Writer gpsTxtWriter = null;
 
         @Override
         public void recvImage(double timeSec, Mat bgr) {
@@ -76,8 +85,25 @@ public class JavaCameraActivity extends Activity {
             final StringBuilder infoBuilder = new StringBuilder();
             float[] pos = VinsUtils.getLatestPosition();
             float[] ang = VinsUtils.getLatestEulerAngles();
+            float[] gps = VinsUtils.getLatestGPS();
+            if (gpsTxtWriter == null) {
+                try {
+                    gpsTxtWriter = new BufferedWriter(new FileWriter(new File(saveDir, "gps.txt")));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (gps[0] != 0) {
+                try {
+                    gpsTxtWriter.append(String.format(Locale.CHINA, "%.6f %.6f %.6f %.6f %.6f\n", System.currentTimeMillis() / 1000.0, gps[0], gps[1], gps[2], 10.0));
+                    gpsTxtWriter.flush();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
             infoBuilder.append(String.format(Locale.CHINA, "pos: %.2f %.2f %.2f\n", pos[0], pos[1], pos[2]));
             infoBuilder.append(String.format(Locale.CHINA, "ang: %.2f %.2f %.2f\n", ang[0], ang[1], ang[2]));
+            infoBuilder.append(String.format(Locale.CHINA, "gps: %.6f %.6f %.2f\n", gps[0], gps[1], gps[2]));
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -106,7 +132,7 @@ public class JavaCameraActivity extends Activity {
 
         sensorRecorder = new FileSensorRecorder();
         final ISensorSource phoneSensorSource = new PhoneSensorSource(JavaCameraActivity.this);
-        final ISensorSource fileSensorSource = new FileSensorSource(new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "0_vins_record/2019-03-06_15:43:01/"));
+        fileSensorSource = new FileSensorSource(new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "0_vins_record/2019-03-06_15:43:01/"));
         sensorSource = phoneSensorSource;
         sensorSource.registerListener(sensorListener);
         sensorSource.registerListener(sensorRecorder);
@@ -139,7 +165,7 @@ public class JavaCameraActivity extends Activity {
         findViewById(R.id.start_slam).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(!VinsUtils.initSucess()) {
+                if (!VinsUtils.initSucess()) {
                     VinsUtils.init("");
                     Toast.makeText(JavaCameraActivity.this, "开始slam", Toast.LENGTH_SHORT).show();
                 }
@@ -171,6 +197,13 @@ public class JavaCameraActivity extends Activity {
             public void onClick(View v) {
                 enable = !enable;
                 VinsUtils.enableAR(enable);
+            }
+        });
+
+        findViewById(R.id.choose_dir).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showFileChooser(saveDir);
             }
         });
 
@@ -256,5 +289,40 @@ public class JavaCameraActivity extends Activity {
                 finish();
             }
         }
+    }
+
+    private static final int FILE_SELECT_CODE = 20001;
+
+    private void showFileChooser(File baseDir) {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("text/plain");//无类型限制
+        try {
+            startActivityForResult(intent, FILE_SELECT_CODE);
+        } catch (android.content.ActivityNotFoundException ex) {
+            // Potentially direct the user to the Market with a Dialog
+            Toast.makeText(this, "Please install a File Manager.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode) {
+            case FILE_SELECT_CODE:
+                if (resultCode == RESULT_OK) {
+                    // Get the Uri of the selected file
+                    Uri uri = data.getData();
+                    Log.d(TAG, "File Uri: " + uri.toString());
+                    // Get the path
+                    String path = FileUtils.getPath(this, uri);
+                    fileSensorSource = new FileSensorSource(new File(path).getParentFile());
+                    Log.d(TAG, "File Path: " + path);
+                    // Get the file instance
+                    // File file = new File(path);
+                    // Initiate the upload
+                }
+                break;
+        }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 }
