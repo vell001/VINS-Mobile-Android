@@ -148,7 +148,7 @@ JNIEXPORT jfloatArray JNICALL
 Java_com_vell_vins_VinsUtils_getLatestGPS(JNIEnv *env, jclass type) {
     jfloatArray ret = env->NewFloatArray(3);
     if (inited) {
-        Vector3d pos = viewControllerGlobal->getLatestPosition().cast<double>();
+        Vector3d pos = viewControllerGlobal->getLatestPositionGlobal();
         double latitude;
         double longitude;
         double altitude;

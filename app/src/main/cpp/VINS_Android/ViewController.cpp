@@ -261,11 +261,9 @@ void ViewController::processImage(cv::Mat &image, double timeStamp, bool isScree
         if (globalOptimization != nullptr) {
             globalOptimization->inputOdom(timeStamp, lateast_P.cast<double>(), Eigen::Quaterniond(lateast_R.cast<double>()));
             // 更新latest_P & lateast_R
-            Eigen::Vector3d odomP;
-            Eigen::Quaterniond odomQ;
-            globalOptimization->getGlobalOdom(odomP,odomQ);
-            lateast_P = odomP.cast<float>();
-            lateast_R = odomQ.toRotationMatrix().cast<float>();
+            globalOptimization->getGlobalOdom(latest_P_global,latest_R_global);
+//            lateast_P = odomP.cast<float>();
+//            lateast_R = odomQ.toRotationMatrix().cast<float>();
         }
 
         if (ui_main || start_show == false ||
@@ -282,6 +280,8 @@ void ViewController::processImage(cv::Mat &image, double timeStamp, bool isScree
                 cv::Mat mask;
                 cv::Mat imageAI = vins.imageAI;
                 if (!imageAI.empty())
+
+
                     cv::cvtColor(imageAI, mask, CV_RGB2GRAY);
                 imageAI.copyTo(tmp, mask);
 

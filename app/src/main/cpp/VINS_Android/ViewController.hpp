@@ -362,6 +362,10 @@ public:
         return lateast_P;
     }
 
+    Vector3d getLatestPositionGlobal() {
+        return latest_P_global;
+    }
+
     Matrix3f getLatestRotation() {
         return lateast_R;
     }
@@ -409,6 +413,8 @@ public:
     cv::Mat lateast_image; //UIImage *lateast_image;
     Vector3f lateast_P;
     Matrix3f lateast_R;
+    Eigen::Vector3d latest_P_global;
+    Eigen::Quaterniond latest_R_global;
     GlobalOptimization *globalOptimization = nullptr; // 全局优化器，基于GPS
 
     cv::Mat pnp_image;

@@ -21,10 +21,7 @@ enum DeviceType
     Mix2,
     unDefine
 };
-//extrinsic param
-#define RIC_y ((double)0.0)
-#define RIC_p ((double)0.0)
-#define RIC_r ((double)180.0)
+
 #define MIN_LOOP_NUM 22
 #define LOOP_FREQ 3
 #define WINDOW_SIZE 10
@@ -61,6 +58,10 @@ extern double PX;
 extern double SOLVER_TIME;
 extern int FREQ;
 
+//extrinsic param
+#define RIC_y ((double)0.0)
+#define RIC_p ((double)0.0)
+#define RIC_r ((double)180.0)
 //extrinsic param
 extern double TIC_X;
 extern double TIC_Y;
