@@ -15,6 +15,7 @@ public interface ISensorSource {
 
     interface SensorListener {
         void recvImu(double timeSec, double ax, double ay, double az, double gx, double gy, double gz);
+        void recvMag(double timeSec, double yaw, double pitch, double roll);
 
         void recvImage(double timeSec, Mat bgr);
 

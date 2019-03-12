@@ -26,10 +26,11 @@ public class FileSensorRecorder implements ISensorSource.SensorListener {
     private File imageSaveDir;
     private Writer frameTxtWriter;
     private Writer imuTxtWriter;
+    private Writer magTxtWriter;
     private Writer gpsTxtWriter;
     private HandlerThread threadHandler;
     private Handler recordHandler;
-    private SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss", Locale.CHINA);
+    private SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd_HH_mm_ss", Locale.CHINA);
 
     public void startRecord() {
         if (isRecording) {
@@ -46,6 +47,7 @@ public class FileSensorRecorder implements ISensorSource.SensorListener {
         try {
             frameTxtWriter = new BufferedWriter(new FileWriter(new File(recordDir, "frame.txt")));
             imuTxtWriter = new BufferedWriter(new FileWriter(new File(recordDir, "imu.txt")));
+            magTxtWriter = new BufferedWriter(new FileWriter(new File(recordDir, "mag.txt")));
             gpsTxtWriter = new BufferedWriter(new FileWriter(new File(recordDir, "gps.txt")));
         } catch (IOException e) {
             e.printStackTrace();
@@ -76,6 +78,11 @@ public class FileSensorRecorder implements ISensorSource.SensorListener {
                 imuTxtWriter.close();
                 imuTxtWriter = null;
             }
+            if (magTxtWriter != null) {
+                magTxtWriter.flush();
+                magTxtWriter.close();
+                magTxtWriter = null;
+            }
             if (gpsTxtWriter != null) {
                 gpsTxtWriter.flush();
                 gpsTxtWriter.close();
@@ -103,6 +110,27 @@ public class FileSensorRecorder implements ISensorSource.SensorListener {
                         imuTxtWriter.append(String.format(Locale.CHINA, "%.6f %.6f %.6f %.6f %.6f %.6f %.6f\n", timeSec, ax, ay, az, gx, gy, gz));
                         if (timeSec % 100 <= 10) {
                             imuTxtWriter.flush();
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                }
+            });
+        }
+    }
+
+    @Override
+    public void recvMag(final double timeSec, final double yaw, final double pitch, final double roll) {
+        if (isRecording) {
+            recordHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        if (magTxtWriter == null) return;
+                        magTxtWriter.append(String.format(Locale.CHINA, "%.6f %.6f %.6f %.6f \n", timeSec, yaw, pitch, roll));
+                        if (timeSec % 100 <= 10) {
+                            magTxtWriter.flush();
                         }
                     } catch (IOException e) {
                         e.printStackTrace();

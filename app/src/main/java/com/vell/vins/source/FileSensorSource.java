@@ -28,6 +28,7 @@ public class FileSensorSource extends BaseSensorSource {
     private File imageSaveDir;
     private BufferedReader frameTxtReader;
     private BufferedReader imuTxtReader;
+    private BufferedReader magTxtReader;
     private BufferedReader gpsTxtReader;
     private double dataTimeToNowDeltaSec = 0;
     private HandlerThread threadHandler;
@@ -104,6 +105,38 @@ public class FileSensorSource extends BaseSensorSource {
             }
         }
     };
+    private Runnable magRunnable = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                final String magLine = magTxtReader.readLine();
+                if (magLine == null) {
+                    Log.e(TAG, "mag data is empty");
+                } else {
+                    final double[] data = str2NumArr(magLine);
+                    if (data.length == 4) {
+                        if (dataTimeToNowDeltaSec == 0) {
+                            dataTimeToNowDeltaSec = SystemClock.uptimeMillis() / 1000.0 - data[0] + 0.1;
+                        }
+                        playbackHandler.postAtTime(new Runnable() {
+                            @Override
+                            public void run() {
+                                Log.d(TAG,"recv mag" + magLine);
+                                recvMag(data[0], data[1], data[2], data[3]);
+
+                                // 继续执行读帧
+                                playbackHandler.post(magRunnable);
+                            }
+                        }, (long) ((data[0] + dataTimeToNowDeltaSec) * 1000));
+                    } else {
+                        Log.e(TAG, "mag data format error");
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    };
     private Runnable gpsRunnable = new Runnable() {
         @Override
         public void run() {
@@ -148,10 +181,12 @@ public class FileSensorSource extends BaseSensorSource {
             imageSaveDir = new File(dataDir, "image");
             File frameTxt = new File(dataDir, "frame.txt");
             File imuTxt = new File(dataDir, "imu.txt");
+            File magTxt = new File(dataDir, "mag.txt");
             File gpsTxt = new File(dataDir, "gps.txt");
             try {
                 frameTxtReader = new BufferedReader(new FileReader(frameTxt));
                 imuTxtReader = new BufferedReader(new FileReader(imuTxt));
+                magTxtReader = new BufferedReader(new FileReader(magTxt));
                 gpsTxtReader = new BufferedReader(new FileReader(gpsTxt));
 
                 threadHandler = new HandlerThread("FileSensorSourceThread");
@@ -165,6 +200,7 @@ public class FileSensorSource extends BaseSensorSource {
                 imageHandler.post(frameRunnable);
 
                 playbackHandler.post(imuRunnable);
+                playbackHandler.post(magRunnable);
                 playbackHandler.post(gpsRunnable);
 
                 if (stateCallback != null) stateCallback.onOpened();
@@ -185,6 +221,10 @@ public class FileSensorSource extends BaseSensorSource {
             if (imuTxtReader != null) {
                 imuTxtReader.close();
                 imuTxtReader = null;
+            }
+            if (magTxtReader != null) {
+                magTxtReader.close();
+                magTxtReader = null;
             }
             if (gpsTxtReader != null) {
                 gpsTxtReader.close();

@@ -132,7 +132,7 @@ extern "C"
 JNIEXPORT jfloatArray JNICALL
 Java_com_vell_vins_VinsUtils_getLatestGroundCenter(JNIEnv *env, jclass type) {
     jfloatArray ret = env->NewFloatArray(3);
-    if(inited) {
+    if (inited) {
         Vector3f pos = viewControllerGlobal->getLatestGroundCenter();
         jfloat posJ[3] = {
                 pos(0), pos(1), pos(2)
@@ -143,16 +143,21 @@ Java_com_vell_vins_VinsUtils_getLatestGroundCenter(JNIEnv *env, jclass type) {
     return ret;
 }
 
+Eigen::Matrix3d globalPositonRotation = Utility::ypr2R(Vector3d(-90.0f, 0.0f, 0.0f));
+
 extern "C"
 JNIEXPORT jfloatArray JNICALL
 Java_com_vell_vins_VinsUtils_getLatestGPS(JNIEnv *env, jclass type) {
     jfloatArray ret = env->NewFloatArray(3);
     if (inited) {
-        Vector3d pos = viewControllerGlobal->getLatestPositionGlobal();
+        Vector3d pos = viewControllerGlobal->getLatestPosition().cast<double>();
+//        Vector3d pos = viewControllerGlobal->getLatestPositionGlobal();
+        pos = pos.transpose() * globalPositonRotation;
         double latitude;
         double longitude;
         double altitude;
-        viewControllerGlobal->globalOptimization->XYZ2GPS(pos.data(), latitude, longitude, altitude);
+        viewControllerGlobal->globalOptimization->XYZ2GPS(pos.data(), latitude, longitude,
+                                                          altitude);
         jfloat posJ[3] = {
                 (float) latitude, (float) longitude, (float) altitude
         };
@@ -161,4 +166,25 @@ Java_com_vell_vins_VinsUtils_getLatestGPS(JNIEnv *env, jclass type) {
     }
     return ret;
 
+}
+
+bool isAligned = false;
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_vell_vins_VinsUtils_setCurYaw(JNIEnv *env, jclass type, jfloat yaw) {
+    if (inited) {
+        double magYaw = (double) yaw;
+        // yaw正北夹角，用于修正vins的局部坐标
+        Matrix3d vioR = viewControllerGlobal->getLatestRotation().cast<double>();
+        Matrix3d rot =
+                vioR * globalPositonRotation;
+        Vector3d angles = Utility::R2ypr(rot);
+        double vioYaw = angles[0];
+        if ((!isAligned && Utility::R2ypr(vioR)[0] != 0)) {
+            globalPositonRotation =
+                    globalPositonRotation * Utility::ypr2R(Vector3d((magYaw - vioYaw), 0.0f, 0.0f));
+            LOGI("夹角修正, %f %f", vioYaw, magYaw);
+            isAligned = true;
+        }
+    }
 }

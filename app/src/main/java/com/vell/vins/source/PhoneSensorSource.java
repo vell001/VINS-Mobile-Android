@@ -18,8 +18,10 @@ import android.media.Image;
 import android.media.ImageReader;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
+import android.util.Log;
 
 import com.vell.vins.ImageUtils;
+import com.vell.vins.VinsUtils;
 
 import org.opencv.core.Mat;
 
@@ -101,6 +103,7 @@ public class PhoneSensorSource extends BaseSensorSource implements SensorEventLi
         sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
         sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_FASTEST);
         sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_FASTEST);
+        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD), SensorManager.SENSOR_DELAY_FASTEST);
 
         locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
         final String bestProvider = locationManager.getBestProvider(new Criteria(), false);
@@ -119,6 +122,7 @@ public class PhoneSensorSource extends BaseSensorSource implements SensorEventLi
 
     private SensorEvent lastAccSensorEvent = null;
     private SensorEvent lastGyrSensorEvent = null;
+    private SensorEvent lastMagSensorEvent = null;
 
     @Override
     public void onSensorChanged(SensorEvent event) {
@@ -132,7 +136,8 @@ public class PhoneSensorSource extends BaseSensorSource implements SensorEventLi
             case Sensor.TYPE_ACCELEROMETER:
                 lastAccSensorEvent = event;
                 break;
-            case Sensor.TYPE_PRESSURE:
+            case Sensor.TYPE_MAGNETIC_FIELD:
+                lastMagSensorEvent = event;
                 break;
             default:
                 break;
@@ -148,6 +153,18 @@ public class PhoneSensorSource extends BaseSensorSource implements SensorEventLi
 
             double timeSec = timeNanos / 1000000000.0 + sensorTimestampDalta;
             recvImu(timeSec, ax, ay, az, gx, gy, gz);
+        }
+
+        if (lastMagSensorEvent != null && lastAccSensorEvent != null && Math.abs(lastAccSensorEvent.timestamp - lastMagSensorEvent.timestamp) < 1000000.0) {
+            float[] values = new float[3];
+            float[] rotate = new float[9];
+            SensorManager.getRotationMatrix(rotate, null, lastAccSensorEvent.values, lastMagSensorEvent.values);
+            SensorManager.getOrientation(rotate, values);
+            double timeSec = lastMagSensorEvent.timestamp / 1000000000.0 + sensorTimestampDalta;
+            recvMag(timeSec, Math.toDegrees(values[0]), Math.toDegrees(values[1]), Math.toDegrees(values[2]));
+
+            // 不重复处理同一个event
+            lastMagSensorEvent = null;
         }
 
     }

@@ -26,6 +26,12 @@ public abstract class BaseSensorSource implements ISensorSource {
         }
     }
 
+    protected void recvMag(double timeSec, double yaw, double pitch, double roll) {
+        for (SensorListener listener : sensorListeners) {
+            listener.recvMag(timeSec, yaw, pitch, roll);
+        }
+    }
+
     protected void recvImage(double timeSec, Mat bgr) {
         for (SensorListener listener : sensorListeners) {
             listener.recvImage(timeSec, bgr);

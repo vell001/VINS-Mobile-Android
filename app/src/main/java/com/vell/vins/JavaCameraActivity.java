@@ -102,6 +102,7 @@ public class JavaCameraActivity extends Activity {
                     e.printStackTrace();
                 }
             }
+
             infoBuilder.append(String.format(Locale.CHINA, "pos: %.2f %.2f %.2f\n", pos[0], pos[1], pos[2]));
             infoBuilder.append(String.format(Locale.CHINA, "ang: %.2f %.2f %.2f\n", ang[0], ang[1], ang[2]));
             infoBuilder.append(String.format(Locale.CHINA, "gps: %.6f %.6f %.2f\n", gps[0], gps[1], gps[2]));
@@ -122,6 +123,18 @@ public class JavaCameraActivity extends Activity {
         public void recvGPS(double timeSec, double latitude, double longitude, double altitude, double posAccuracy) {
             VinsUtils.recvGPS(timeSec, latitude, longitude, altitude, posAccuracy);
         }
+
+        @Override
+        public void recvMag(double timeSec, final double yaw, final double pitch, final double roll) {
+            Log.i(TAG, String.format("mag: %.2f %.2f %.2f", yaw, pitch, roll));
+            VinsUtils.setCurYaw((float) (yaw ));
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    ((TextView) findViewById(R.id.tv_mag_info)).setText(String.format(Locale.CHINA, "mag: %.2f %.2f %.2f", yaw, pitch, roll));
+                }
+            });
+        }
     };
 
     @Override
@@ -134,7 +147,7 @@ public class JavaCameraActivity extends Activity {
 
         sensorRecorder = new FileSensorRecorder();
         final ISensorSource phoneSensorSource = new PhoneSensorSource(JavaCameraActivity.this);
-        fileSensorSource = new FileSensorSource(new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "0_vins_record/2019-03-06_15:43:01/"));
+        fileSensorSource = new FileSensorSource(new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "0_vins_record/2019-03-12_14:26:00/"));
         sensorSource = phoneSensorSource;
         sensorSource.registerListener(sensorListener);
         sensorSource.registerListener(sensorRecorder);

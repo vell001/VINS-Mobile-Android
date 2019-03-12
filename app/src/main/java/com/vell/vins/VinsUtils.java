@@ -21,6 +21,8 @@ public class VinsUtils {
 
     public static native void enableAR(boolean isAR);
 
+    public static native void setCurYaw(float yaw);
+
     public static native boolean initSucess();
 
     static {
