@@ -127,7 +127,7 @@ public class JavaCameraActivity extends Activity {
         @Override
         public void recvMag(double timeSec, final double yaw, final double pitch, final double roll) {
             Log.i(TAG, String.format("mag: %.2f %.2f %.2f", yaw, pitch, roll));
-            VinsUtils.setCurYaw((float) (yaw ));
+            VinsUtils.recvMag(timeSec, yaw, pitch, roll);
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {

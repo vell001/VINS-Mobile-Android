@@ -14,7 +14,7 @@
 #define printf(...) __android_log_print(ANDROID_LOG_DEBUG, "VINS.hpp", __VA_ARGS__);
 
 // 开启回环检测 或者 gps全局优化，最好二者选其一
-bool LOOP_CLOSURE = false;
+bool LOOP_CLOSURE = true;
 bool GLOBAL_OPTIMISE = true;
 
 VINS::VINS()
@@ -404,7 +404,7 @@ void VINS::processImage(map<int, Vector3d> &image_msg, double header, int buf_nu
                 return;
             }
             bool result = false;
-            if (header - initial_timestamp > 0.3) {
+            if (header - initial_timestamp > 0.5) {
                 result = solveInitial();
                 initial_timestamp = header;
             }
@@ -825,46 +825,43 @@ bool VINS::solveInitial() {
     printf("PS %lf %lf %lf\n", Ps[0].x(), Ps[0].y(), Ps[0].z());
 
     //check imu observibility
-    /*
-     {
-     map<double, ImageFrame>::iterator frame_it;
-     Vector3d sum_g;
-     for (frame_it = all_image_frame.begin(), frame_it++; frame_it != all_image_frame.end(); frame_it++)
-     {
-     double dt = frame_it->second.pre_integration->sum_dt;
-     if(dt == 0)
-     {
-     printf("init IMU variation not enouth!\n");
-     init_status = FAIL_IMU;
-     fail_times++;
-     return false;
-     }
-     Vector3d tmp_g = frame_it->second.pre_integration->delta_v / dt;
-     sum_g += tmp_g;
-     }
-     
-     Vector3d aver_g;
-     aver_g = sum_g * 1.0 / ((int)all_image_frame.size() - 1);
-     printf("aver_g %lf %lf %lf", aver_g[0], aver_g[1], aver_g[2]);// cout << "aver_g " << aver_g.transpose() << endl;
-     double var = 0;
-     for (frame_it = all_image_frame.begin(), frame_it++; frame_it != all_image_frame.end(); frame_it++)
-     {
-     double dt = frame_it->second.pre_integration->sum_dt;
-     Vector3d tmp_g = frame_it->second.pre_integration->delta_v / dt;
-     var += (tmp_g - aver_g).transpose() * (tmp_g - aver_g);
-     //cout << "frame g " << tmp_g.transpose() << endl;
-     }
-     var = sqrt(var / ((int)all_image_frame.size() - 1));
-     printf("IMU variation %f!\n", var);
-     if(var < 0.25)
-     {
-     printf("init IMU variation not enouth!\n");
-     init_status = FAIL_IMU;
-     fail_times++;
-     return false;
-     }
-     }
-    */
+    /*{
+        map<double, ImageFrame>::iterator frame_it;
+        Vector3d sum_g;
+        for (frame_it = all_image_frame.begin(), frame_it++;
+             frame_it != all_image_frame.end(); frame_it++) {
+            double dt = frame_it->second.pre_integration->sum_dt;
+            if (dt == 0) {
+                printf("init IMU variation not enouth!\n");
+                init_status = FAIL_IMU;
+                fail_times++;
+                return false;
+            }
+            Vector3d tmp_g = frame_it->second.pre_integration->delta_v / dt;
+            sum_g += tmp_g;
+        }
+
+        Vector3d aver_g;
+        aver_g = sum_g * 1.0 / ((int) all_image_frame.size() - 1);
+        printf("aver_g %lf %lf %lf", aver_g[0], aver_g[1],
+               aver_g[2]);// cout << "aver_g " << aver_g.transpose() << endl;
+        double var = 0;
+        for (frame_it = all_image_frame.begin(), frame_it++;
+             frame_it != all_image_frame.end(); frame_it++) {
+            double dt = frame_it->second.pre_integration->sum_dt;
+            Vector3d tmp_g = frame_it->second.pre_integration->delta_v / dt;
+            var += (tmp_g - aver_g).transpose() * (tmp_g - aver_g);
+            //cout << "frame g " << tmp_g.transpose() << endl;
+        }
+        var = sqrt(var / ((int) all_image_frame.size() - 1));
+        printf("IMU variation %f!\n", var);
+        if (var < 0.25) {
+            printf("init IMU variation not enouth!\n");
+            init_status = FAIL_IMU;
+            fail_times++;
+            return false;
+        }
+    }*/
 
     // global sfm
     Quaterniond *Q = new Quaterniond[frame_count + 1];

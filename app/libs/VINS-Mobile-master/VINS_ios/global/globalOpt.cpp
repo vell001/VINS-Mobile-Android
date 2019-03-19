@@ -23,12 +23,17 @@ GlobalOptimization::~GlobalOptimization() {
     threadOpt.detach();
 }
 
-void GlobalOptimization::GPS2XYZ(double latitude, double longitude, double altitude, double *xyz) {
+void GlobalOptimization::init(double latitude, double longitude, double altitude) {
     if (!initGPS) {
         geoConverter.Reset(latitude, longitude, altitude);
         initGPS = true;
     }
-    geoConverter.Forward(latitude, longitude, altitude, xyz[0], xyz[1], xyz[2]);
+}
+
+void GlobalOptimization::GPS2XYZ(double latitude, double longitude, double altitude, double *xyz) {
+    if (initGPS) {
+        geoConverter.Forward(latitude, longitude, altitude, xyz[0], xyz[1], xyz[2]);
+    }
     //printf("la: %f lo: %f al: %f\n", latitude, longitude, altitude);
     //printf("gps x: %f y: %f z: %f\n", xyz[0], xyz[1], xyz[2]);
 }
@@ -67,6 +72,9 @@ void GlobalOptimization::getGlobalOdom(Eigen::Vector3d &odomP, Eigen::Quaternion
 void GlobalOptimization::inputGPS(double t, double latitude, double longitude, double altitude,
                                   double posAccuracy) {
     double xyz[3];
+    if (!initGPS) {
+        init(latitude, longitude, altitude);
+    }
     GPS2XYZ(latitude, longitude, altitude, xyz);
     vector<double> tmp{xyz[0], xyz[1], xyz[2], posAccuracy};
     GPSPositionMap[t] = tmp;

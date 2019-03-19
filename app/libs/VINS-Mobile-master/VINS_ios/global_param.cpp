@@ -149,14 +149,14 @@ bool setGlobalParam(DeviceType device)
             PX = 172.749;
             PY = 324.371;
 
-            SOLVER_TIME =  0.06; // 0.06 TODO
+            SOLVER_TIME =  0.6; // 0.06 TODO
             FREQ = 3;
 
             //extrinsic param
             // TIC = Translation IMU to Camera
             TIC_X = 0.00334796; // view direction
-            TIC_Y = 0.0553879; //-0.005 // to the left when device is in landscape (up when normal)
-            TIC_Z = -0.0159663; //-0.018792; // up when in landscape (right when normal)
+            TIC_Y = -0.0159663; //-0.005 // to the left when device is in landscape (up when normal)
+            TIC_Z = 0.0553879; //-0.018792; // up when in landscape (right when normal)
             return true;
             break;
         case unDefine:

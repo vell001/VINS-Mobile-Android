@@ -35,7 +35,7 @@ public:
     void inputOdom(double t, Eigen::Vector3d OdomP, Eigen::Quaterniond OdomQ);
 
     void getGlobalOdom(Eigen::Vector3d &odomP, Eigen::Quaterniond &odomQ);
-
+    void init(double latitude, double longitude, double altitude);
     void GPS2XYZ(double latitude, double longitude, double altitude, double *xyz);
 
     void XYZ2GPS(double *xyz, double &latitude, double &longitude, double &altitude);

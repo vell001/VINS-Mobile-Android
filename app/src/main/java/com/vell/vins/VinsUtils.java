@@ -6,12 +6,13 @@ public class VinsUtils {
     public static native void recvImage(double timeSec, long rgbaPtr);
     public static native void recvGPS(double timeSec, double latitude, double longitude, double altitude,
                                       double posAccuracy);
-
+    public static native void recvMag(double timeSec, double yaw, double pitch, double roll);
     public static native void init(String configPath);
 
     public static native float[] getLatestPosition();
 
     public static native float[] getLatestGPS();
+    public static native double[] GPS2XYZ(double latitude, double longitude, double altitude);
 
     public static native float[] getLatestRotation();
 
@@ -20,8 +21,6 @@ public class VinsUtils {
     public static native float[] getLatestGroundCenter();
 
     public static native void enableAR(boolean isAR);
-
-    public static native void setCurYaw(float yaw);
 
     public static native boolean initSucess();
 

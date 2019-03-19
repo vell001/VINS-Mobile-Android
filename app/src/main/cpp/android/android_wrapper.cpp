@@ -171,7 +171,9 @@ Java_com_vell_vins_VinsUtils_getLatestGPS(JNIEnv *env, jclass type) {
 bool isAligned = false;
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_vell_vins_VinsUtils_setCurYaw(JNIEnv *env, jclass type, jfloat yaw) {
+Java_com_vell_vins_VinsUtils_recvMag(JNIEnv *env, jclass type, jdouble timeSec, jdouble yaw,
+                                     jdouble pitch, jdouble roll) {
+
     if (inited) {
         double magYaw = (double) yaw;
         // yaw正北夹角，用于修正vins的局部坐标
@@ -187,4 +189,22 @@ Java_com_vell_vins_VinsUtils_setCurYaw(JNIEnv *env, jclass type, jfloat yaw) {
             isAligned = true;
         }
     }
+}
+
+extern "C"
+JNIEXPORT jdoubleArray JNICALL
+Java_com_vell_vins_VinsUtils_GPS2XYZ(JNIEnv *env, jclass type, jdouble latitude, jdouble longitude,
+                                     jdouble altitude) {
+    jdoubleArray ret = env->NewDoubleArray(3);
+    if (inited) {
+        double xyz[3];
+        viewControllerGlobal->globalOptimization->GPS2XYZ(latitude, longitude, altitude, xyz);
+        Vector3d pos(xyz[0], xyz[1], xyz[2]);
+        pos = globalPositonRotation * pos;
+        xyz[0] = pos[0];
+        xyz[1] = pos[1];
+        xyz[2] = pos[2];
+        env->SetDoubleArrayRegion(ret, 0, 3, xyz);
+    }
+    return ret;
 }
